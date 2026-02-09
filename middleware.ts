@@ -1,3 +1,4 @@
+// This file has been updated to use the createServerClient pattern for Supabase.
 import { NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 

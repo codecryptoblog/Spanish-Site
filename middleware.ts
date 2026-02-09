@@ -1,17 +1,10 @@
-import { createMiddlewareClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware'
 
 import type { NextRequest } from 'next/server'
-import type { Database } from '@/lib/database.types' // Import the Database type
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  // Use the Database type here
-  const supabase = createMiddlewareClient<Database>({ req, res })
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const res = await updateSession(req)
 
   const { pathname } = req.nextUrl
 
@@ -20,6 +13,22 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/auth') || pathname === '/onboarding') {
     return res
   }
+
+  // After updateSession, the `res` object will contain the updated session information
+  // We need to extract the session from the response to check if the user is authenticated.
+  // However, `updateSession` already handles refreshing the session and returns the response.
+  // We need to ensure that the session is available for subsequent checks.
+  // For now, let's assume that if updateSession returns a response, the session is handled.
+
+  // We need to re-create the supabase client to get the session here,
+  // or pass the session in the response headers/cookies and retrieve it.
+  // For simplicity, I'll re-create a client *without* cookie modification
+  // to just read the session. This is not ideal for performance.
+  // A better approach would be to pass the session through the response or use server components.
+
+  // Re-creating a client to check session for redirect logic
+  const { supabase } = await import('@/lib/supabase/middleware').then(mod => mod.createClient(req));
+  const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
     // No session, redirect to login

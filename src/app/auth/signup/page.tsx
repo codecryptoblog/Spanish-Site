@@ -46,7 +46,8 @@ export default function SignUp() {
       localStorage.removeItem('onboarding_answers')
       
       // Go to payment page
-      router.push('/payment')
+      // In handleSignUp function, change the redirect:
+      router.push('/placement-test')  // Instead of router.push('/payment')
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
     } finally {

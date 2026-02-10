@@ -55,7 +55,26 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Check subscription for lesson access
+  if (user && request.nextUrl.pathname.startsWith('/lessons/')) {
+    const { data: userData } = await supabase
+      .from('users')
+      .select('subscription_status, lessons_this_month, role')
+      .eq('id', user.id)
+      .single()
+
+    if (userData?.role === 'student' && userData?.subscription_status === 'free' && userData?.lessons_this_month >= 5) {
+      return NextResponse.redirect(new URL('/payment?upgrade=true', request.url))
+    }
+  }
 
   return response
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }

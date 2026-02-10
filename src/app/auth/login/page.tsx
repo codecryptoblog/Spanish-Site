@@ -98,6 +98,13 @@ export default function Login() {
               </Link>
             </p>
           </div>
+          // Add this after the "Don't have an account?" section
+          <div className="mt-4 pt-4 border-t border-gray-200 text-center">
+            <p className="text-gray-600 mb-2">Student joining a class?</p>
+            <Link href="/auth/classcode" className="text-blue-600 font-semibold hover:text-blue-700 flex items-center justify-center gap-2">
+              <span>🎓</span> Join with Class Code
+            </Link>
+          </div>
         </div>
       </div>
     </div>

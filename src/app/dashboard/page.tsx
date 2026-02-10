@@ -13,6 +13,7 @@ export default function DashboardPage() {
     totalPoints: 0,
     level: 'Beginner'
   })
+  const [showQuickActions, setShowQuickActions] = useState(true)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
@@ -61,7 +62,7 @@ export default function DashboardPage() {
   }
 
   const handleStartLesson = () => {
-    alert('Starting lesson!')
+    router.push('/lesson?title=Greetings%20&%20Introductions')
   }
 
   const handleSignOut = async () => {
@@ -91,6 +92,13 @@ export default function DashboardPage() {
               <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 LearnSmart
               </span>
+            </div>
+            <div className="hidden md:flex items-center gap-4">
+              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">Flashcard Studying</Link>
+              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">Focus Time</Link>
+              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">Assignments</Link>
+              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">Grades</Link>
+              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">AI Study Assistant</Link>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-700 font-medium">
@@ -172,25 +180,27 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
-              <div className="text-4xl mb-3">💬</div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Practice Speaking</h3>
-              <p className="text-gray-600 text-sm">AI conversation partner</p>
-            </button>
-            
-            <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
-              <div className="text-4xl mb-3">📝</div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Vocabulary Review</h3>
-              <p className="text-gray-600 text-sm">Flashcards & quizzes</p>
-            </button>
-            
-            <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
-              <div className="text-4xl mb-3">🎮</div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Learning Games</h3>
-              <p className="text-gray-600 text-sm">Fun mini-games</p>
-            </button>
-          </div>
+          {showQuickActions && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
+                <div className="text-4xl mb-3">💬</div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Practice Speaking</h3>
+                <p className="text-gray-600 text-sm">AI conversation partner</p>
+              </button>
+              
+              <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
+                <div className="text-4xl mb-3">📝</div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Vocabulary Review</h3>
+                <p className="text-gray-600 text-sm">Flashcards & quizzes</p>
+              </button>
+              
+              <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
+                <div className="text-4xl mb-3">🎮</div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Learning Games</h3>
+                <p className="text-gray-600 text-sm">Fun mini-games</p>
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>

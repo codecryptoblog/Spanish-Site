@@ -94,11 +94,11 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="hidden md:flex items-center gap-4">
-              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">Flashcard Studying</Link>
-              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">Focus Time</Link>
-              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">Assignments</Link>
-              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">Grades</Link>
-              <Link href="#" className="text-sm font-medium text-gray-700 hover:text-purple-600">AI Study Assistant</Link>
+              <Link href="/flashcards" className="text-sm font-medium text-gray-700 hover:text-purple-600">Flashcard Studying</Link>
+              <Link href="/focus-time" className="text-sm font-medium text-gray-700 hover:text-purple-600">Focus Time</Link>
+              <Link href="/assignments" className="text-sm font-medium text-gray-700 hover:text-purple-600">Assignments</Link>
+              <Link href="/grades" className="text-sm font-medium text-gray-700 hover:text-purple-600">Grades</Link>
+              <Link href="/ai-study-assistant" className="text-sm font-medium text-gray-700 hover:text-purple-600">AI Study Assistant</Link>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-700 font-medium">
@@ -182,19 +182,19 @@ export default function DashboardPage() {
           {/* Quick Actions */}
           {showQuickActions && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
+              <button onClick={() => router.push('/practice-speaking')} className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
                 <div className="text-4xl mb-3">💬</div>
                 <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Practice Speaking</h3>
                 <p className="text-gray-600 text-sm">AI conversation partner</p>
               </button>
               
-              <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
+              <button onClick={() => router.push('/vocabulary-review')} className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
                 <div className="text-4xl mb-3">📝</div>
                 <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Vocabulary Review</h3>
                 <p className="text-gray-600 text-sm">Flashcards & quizzes</p>
               </button>
               
-              <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
+              <button onClick={() => router.push('/learning-games')} className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
                 <div className="text-4xl mb-3">🎮</div>
                 <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Learning Games</h3>
                 <p className="text-gray-600 text-sm">Fun mini-games</p>

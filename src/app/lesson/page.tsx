@@ -2,9 +2,9 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Suspense } from 'react'
 
-export default function LessonPage() {
-  const router = useRouter()
+function LessonPageContent() {
   const searchParams = useSearchParams()
   const lessonTitle = searchParams.get('title') || 'Lesson'
 
@@ -18,5 +18,13 @@ export default function LessonPage() {
         </Link>
       </div>
     </div>
+  )
+}
+
+export default function LessonPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LessonPageContent />
+    </Suspense>
   )
 }

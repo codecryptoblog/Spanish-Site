@@ -1,143 +1,145 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
-import Link from 'next/link';
-import { Database } from '@/lib/database.types';
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 
-type UserRole = Database['public']['Enums']['user_role'];
-
-interface User {
-  id: string;
-  email?: string;
-  user_metadata?: {
-    name?: string;
-  };
-}
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const supabase = createClient();
+export default function DashboardPage() {
+  const [user, setUser] = useState<any>(null)
+  const [stats, setStats] = useState({
+    lessonsCompleted: 0,
+    currentStreak: 0,
+    totalPoints: 0,
+    level: 'Beginner'
+  })
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          router.push('/auth/login');
-          return;
-        }
+    loadUserData()
+  }, [])
 
-        setUser(user);
-
-        // Fetch user role
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (userData) {
-          setUserRole(userData.role);
-        }
-      } catch (error) {
-        console.error('Error checking user:', error);
-        router.push('/auth/login');
-      } finally {
-        setLoading(false);
+  const loadUserData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        router.push('/auth/login')
+        return
       }
-    };
 
-    checkUser();
-  }, [router, supabase]);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push('/auth/login');
-  };
+      setUser(user)
+      
+      // Load user stats (placeholder data for now)
+      setStats({
+        lessonsCompleted: Math.floor(Math.random() * 20),
+        currentStreak: Math.floor(Math.random() * 7),
+        totalPoints: Math.floor(Math.random() * 1000),
+        level: user.user_metadata?.onboarding_data?.[2] || 'Beginner'
+      })
+    } catch (error) {
+      console.error('Error loading user data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading your dashboard...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/dashboard" className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                LearnSmart
-              </Link>
-              <div className="ml-10 flex items-baseline space-x-4">
-                <Link
-                  href="/dashboard"
-                  className="text-gray-700 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Dashboard
-                </Link>
-                {userRole === 'teacher' && (
-                  <>
-                    <Link
-                      href="/dashboard/students"
-                      className="text-gray-700 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      Students
-                    </Link>
-                    <Link
-                      href="/dashboard/homework"
-                      className="text-gray-700 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      Homework
-                    </Link>
-                  </>
-                )}
-                {userRole === 'student' && (
-                  <Link
-                    href="/dashboard/assignments"
-                    className="text-gray-700 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    My Assignments
-                  </Link>
-                )}
-              </div>
+    <DashboardLayout>
+      <div className="space-y-8">
+        {/* Welcome Section */}
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl p-8 text-white shadow-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">
+                ¡Hola, {user?.user_metadata?.name || 'Estudiante'}! 👋
+              </h1>
+              <p className="text-xl text-white/90">Ready to continue your Spanish journey?</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-700">
-                {user?.user_metadata?.name || user?.email}
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-purple-700 hover:to-pink-700 transition-all"
-              >
-                Sign Out
-              </button>
+            <div className="text-7xl animate-bounce">
+              🦜
             </div>
           </div>
         </div>
-      </nav>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
-    </div>
-  );
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-purple-100">
+            <div className="text-4xl mb-2">📚</div>
+            <div className="text-3xl font-bold text-gray-800">{stats.lessonsCompleted}</div>
+            <div className="text-gray-600">Lessons Completed</div>
+          </div>
+          
+          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-orange-100">
+            <div className="text-4xl mb-2">🔥</div>
+            <div className="text-3xl font-bold text-gray-800">{stats.currentStreak}</div>
+            <div className="text-gray-600">Day Streak</div>
+          </div>
+          
+          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-pink-100">
+            <div className="text-4xl mb-2">⭐</div>
+            <div className="text-3xl font-bold text-gray-800">{stats.totalPoints}</div>
+            <div className="text-gray-600">Total Points</div>
+          </div>
+          
+          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-green-100">
+            <div className="text-4xl mb-2">🎯</div>
+            <div className="text-xl font-bold text-gray-800">{stats.level}</div>
+            <div className="text-gray-600">Current Level</div>
+          </div>
+        </div>
+
+        {/* Today's Lesson */}
+        <div className="bg-white rounded-3xl p-8 shadow-xl">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Today's Lesson</h2>
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-200">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="text-5xl">📖</div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">Greetings & Introductions</h3>
+                <p className="text-gray-600">Learn how to introduce yourself in Spanish</p>
+              </div>
+            </div>
+            <button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl">
+              Start Lesson →
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid md:grid-cols-3 gap-6">
+          <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
+            <div className="text-4xl mb-3">💬</div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Practice Speaking</h3>
+            <p className="text-gray-600 text-sm">AI conversation partner</p>
+          </button>
+          
+          <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
+            <div className="text-4xl mb-3">📝</div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Vocabulary Review</h3>
+            <p className="text-gray-600 text-sm">Flashcards & quizzes</p>
+          </button>
+          
+          <button className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all text-left group">
+            <div className="text-4xl mb-3">🎮</div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-purple-600">Learning Games</h3>
+            <p className="text-gray-600 text-sm">Fun mini-games</p>
+          </button>
+        </div>
+      </div>
+    </DashboardLayout>
+  )
 }

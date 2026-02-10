@@ -32,19 +32,36 @@ export default function DashboardPage() {
 
       setUser(user)
       
-      // Load user stats (placeholder data for now)
-      setStats({
-        lessonsCompleted: Math.floor(Math.random() * 20),
-        currentStreak: Math.floor(Math.random() * 7),
-        totalPoints: Math.floor(Math.random() * 1000),
-        level: user.user_metadata?.onboarding_data?.[2] || 'Beginner'
-      })
+      // Load user stats from the users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (userError) {
+        console.error('Error fetching user profile:', userError)
+      }
+
+      if (userData) {
+        setStats({
+          lessonsCompleted: userData.lessons_completed || 0,
+          currentStreak: userData.current_streak || 0,
+          totalPoints: userData.total_points || 0,
+          level: user.user_metadata?.onboarding_data?.[2] || 'Beginner'
+        })
+      }
+      
     } catch (error) {
       console.error('Error loading user data:', error)
       router.push('/auth/login')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleStartLesson = () => {
+    alert('Starting lesson!')
   }
 
   const handleSignOut = async () => {
@@ -146,7 +163,9 @@ export default function DashboardPage() {
                   <p className="text-gray-600">Learn how to introduce yourself in Spanish</p>
                 </div>
               </div>
-              <button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl">
+              <button 
+                onClick={handleStartLesson}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl">
                 Start Lesson →
               </button>
             </div>

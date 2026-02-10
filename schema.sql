@@ -1,58 +1,64 @@
--- Subjects Table
 CREATE TABLE IF NOT EXISTS subjects (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL UNIQUE
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  description TEXT
 );
 
--- Classes Table
 CREATE TABLE IF NOT EXISTS classes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    class_code TEXT NOT NULL UNIQUE
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  code TEXT NOT NULL UNIQUE,
+  teacher_id UUID REFERENCES users(id)
 );
 
--- User Roles Enum
-CREATE TYPE user_role AS ENUM ('teacher', 'student');
-
--- User Subscription Type Enum
+CREATE TYPE user_role AS ENUM ('admin', 'teacher', 'student');
 CREATE TYPE subscription_type AS ENUM ('free', 'premium');
 
--- Users Table
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY REFERENCES auth.users(id),
-    full_name TEXT,
-    role user_role DEFAULT 'student',
-    class_id UUID REFERENCES classes(id),
-    native_language TEXT DEFAULT 'english',
-    subscription_type subscription_type DEFAULT 'free' -- New column
+  id UUID PRIMARY KEY REFERENCES auth.users(id),
+  name TEXT,
+  role user_role DEFAULT 'student',
+  class_id UUID REFERENCES classes(id),
+  language TEXT DEFAULT 'english',
+  subscription subscription_type DEFAULT 'free',
+  points INT DEFAULT 0,
+  lessons_completed INT DEFAULT 0,
+  streak INT DEFAULT 0
 );
 
--- Lessons Table
 CREATE TABLE IF NOT EXISTS lessons (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    subject_id UUID REFERENCES subjects(id),
-    created_by UUID REFERENCES users(id)
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  subject_id UUID REFERENCES subjects(id),
+  created_by UUID REFERENCES users(id)
 );
 
--- Assignments Table
+CREATE TABLE IF NOT EXISTS lesson_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  lesson_id UUID REFERENCES lessons(id),
+  completed BOOLEAN DEFAULT FALSE,
+  score INT
+);
+
 CREATE TABLE IF NOT EXISTS assignments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    lesson_id UUID REFERENCES lessons(id),
-    due_date TIMESTAMPTZ
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id UUID REFERENCES classes(id),
+  lesson_id UUID REFERENCES lessons(id),
+  created_by UUID REFERENCES users(id),
+  due_date TIMESTAMPTZ
 );
 
--- Quiz Questions Table
 CREATE TABLE IF NOT EXISTS quiz_questions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    lesson_id UUID REFERENCES lessons(id),
-    question TEXT NOT NULL,
-    answer TEXT NOT NULL
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  lesson_id UUID REFERENCES lessons(id),
+  question TEXT NOT NULL,
+  options JSONB NOT NULL,
+  correct_option TEXT NOT NULL
 );
 
--- Leaderboard Table
-CREATE TABLE IF NOT EXISTS leaderboard (
-    user_id UUID PRIMARY KEY REFERENCES users(id),
-    score INTEGER DEFAULT 0
+CREATE TABLE IF NOT EXISTS class_students (
+  class_id UUID REFERENCES classes(id),
+  student_id UUID REFERENCES users(id),
+  PRIMARY KEY (class_id, student_id)
 );

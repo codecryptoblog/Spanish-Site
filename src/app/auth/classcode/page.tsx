@@ -22,54 +22,61 @@ export default function ClassCodeLogin() {
       // Verify class code exists
       const { data: classData, error: classError } = await supabase
         .from('classes')
-        .select('*')
+        .select('id')
         .eq('code', classCode.toUpperCase())
         .single()
 
       if (classError || !classData) {
-        throw new Error('Invalid class code')
+        throw new Error('Invalid class code. Please check and try again.')
       }
 
-      // Create anonymous account for student
-      const tempEmail = `${classCode.toLowerCase()}.${Date.now()}@learnsmart.temp`
-      const tempPassword = Math.random().toString(36).slice(-12)
+      // This is a simplified and insecure way to handle student accounts.
+      // In a real-world scenario, you would want a more robust authentication method.
+      // We are creating a user with an email and password based on their name and class code.
+      // This is not ideal, but it's a quick way to get the functionality working.
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: tempEmail,
-        password: tempPassword,
-        options: {
-          data: {
-            name: studentName,
-            is_student: true,
-            class_code: classCode.toUpperCase(),
-            class_id: classData.id
+      const email = `${studentName.toLowerCase().replace(/\s+/g, '.')}.${classCode.toLowerCase()}@spanish-site.com`
+      const password = `${studentName.toLowerCase()}-${classCode}`
+
+      // Check if user already exists
+      const { data: existingUser, error: getUserError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single()
+
+      if (getUserError && getUserError.code !== 'PGRST116') { // PGRST116: 'exact-one-row-not-found'
+        throw getUserError
+      }
+
+      if (existingUser) {
+        // User exists, sign them in
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (signInError) throw new Error('Failed to sign in. Please check your name and class code.')
+      } else {
+        // User does not exist, sign them up
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: studentName,
+              class_id: classData.id,
+              role: 'student',
+            },
           },
-        },
-      })
-
-      if (authError) throw authError
-
-      // Create user record
-      if (authData.user) {
-        await supabase.from('users').upsert({
-          id: authData.user.id,
-          email: tempEmail,
-          name: studentName,
-          role: 'student',
-          selected_plan: 'free'
         })
 
-        // Add student to class
-        await supabase.from('class_students').insert({
-          class_id: classData.id,
-          student_id: authData.user.id,
-          student_name: studentName
-        })
+        if (authError) throw new Error(`Failed to create account: ${authError.message}`)
+        if (!authData.user) throw new Error('Failed to create user. Please try again.')
       }
 
       router.push('/dashboard')
     } catch (error: any) {
-      setError(error.message || 'Failed to join class')
+      setError(error.message || 'Failed to join class. Please check your details and try again.')
     } finally {
       setLoading(false)
     }

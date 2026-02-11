@@ -5,6 +5,46 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+// Hard-coded lessons data as fallback
+const HARDCODED_LESSONS = {
+  beginner: [
+    { id: '1', title: 'Greetings & Introductions', description: 'Learn how to greet people and introduce yourself', level: 'beginner', category: 'conversation' },
+    { id: '2', title: 'Numbers 1-100', description: 'Master Spanish numbers from one to one hundred', level: 'beginner', category: 'vocabulary' },
+    { id: '3', title: 'Colors & Shapes', description: 'Learn colors and basic shapes in Spanish', level: 'beginner', category: 'vocabulary' },
+    { id: '4', title: 'Days & Months', description: 'Days of the week and months of the year', level: 'beginner', category: 'vocabulary' },
+    { id: '5', title: 'Family Members', description: 'Vocabulary for talking about your family', level: 'beginner', category: 'vocabulary' },
+    { id: '6', title: 'Common Verbs - Present Tense', description: 'Basic verbs in present tense (ser, estar, tener)', level: 'beginner', category: 'grammar' },
+    { id: '7', title: 'Food & Drinks', description: 'Essential food and beverage vocabulary', level: 'beginner', category: 'vocabulary' },
+    { id: '8', title: 'At School', description: 'Classroom objects and school vocabulary', level: 'beginner', category: 'vocabulary' },
+    { id: '9', title: 'Weather & Seasons', description: 'Talking about weather and seasons', level: 'beginner', category: 'conversation' },
+    { id: '10', title: 'Basic Questions', description: 'How to ask and answer simple questions', level: 'beginner', category: 'conversation' }
+  ],
+  intermediate: [
+    { id: '11', title: 'Past Tense (Preterite)', description: 'Learn to talk about completed actions in the past', level: 'intermediate', category: 'grammar' },
+    { id: '12', title: 'Imperfect Tense', description: 'Describing ongoing past actions and habits', level: 'intermediate', category: 'grammar' },
+    { id: '13', title: 'Shopping & Money', description: 'Vocabulary for shopping and discussing prices', level: 'intermediate', category: 'conversation' },
+    { id: '14', title: 'Directions & Transportation', description: 'Asking for and giving directions', level: 'intermediate', category: 'conversation' },
+    { id: '15', title: 'House & Home', description: 'Rooms, furniture, and household items', level: 'intermediate', category: 'vocabulary' },
+    { id: '16', title: 'Health & Body Parts', description: 'Medical vocabulary and describing symptoms', level: 'intermediate', category: 'vocabulary' },
+    { id: '17', title: 'Future Tense', description: 'Talking about future plans and predictions', level: 'intermediate', category: 'grammar' },
+    { id: '18', title: 'Comparisons', description: 'Comparing things using más/menos que', level: 'intermediate', category: 'grammar' },
+    { id: '19', title: 'Hobbies & Free Time', description: 'Discussing activities and pastimes', level: 'intermediate', category: 'conversation' },
+    { id: '20', title: 'Making Reservations', description: 'Booking hotels and restaurants', level: 'intermediate', category: 'conversation' }
+  ],
+  advanced: [
+    { id: '21', title: 'Subjunctive Mood - Present', description: 'Expressing wishes, doubts, and emotions', level: 'advanced', category: 'grammar' },
+    { id: '22', title: 'Conditional Tense', description: 'Talking about hypothetical situations', level: 'advanced', category: 'grammar' },
+    { id: '23', title: 'Business Spanish', description: 'Professional vocabulary and formal communication', level: 'advanced', category: 'conversation' },
+    { id: '24', title: 'Subjunctive - Past', description: 'Past subjunctive for hypothetical situations', level: 'advanced', category: 'grammar' },
+    { id: '25', title: 'Idiomatic Expressions', description: 'Common Spanish idioms and sayings', level: 'advanced', category: 'vocabulary' },
+    { id: '26', title: 'News & Current Events', description: 'Reading and discussing news articles', level: 'advanced', category: 'conversation' },
+    { id: '27', title: 'Por vs Para', description: 'Mastering the difference between por and para', level: 'advanced', category: 'grammar' },
+    { id: '28', title: 'Formal vs Informal', description: 'Understanding register and formality levels', level: 'advanced', category: 'conversation' },
+    { id: '29', title: 'Literature & Culture', description: 'Exploring Spanish and Latin American culture', level: 'advanced', category: 'conversation' },
+    { id: '30', title: 'Advanced Conversation', description: 'Debating and complex discussions', level: 'advanced', category: 'conversation' }
+  ]
+}
+
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [lessons, setLessons] = useState<any[]>([])
@@ -44,62 +84,77 @@ export default function DashboardPage() {
         .single()
 
       if (userData) {
+        // Check if user is teacher/admin - redirect them
+        if (userData.role === 'teacher' || userData.role === 'school_admin' || userData.role === 'admin') {
+          if (userData.role === 'admin') {
+            router.push('/admin')
+          } else {
+            router.push('/teacher')
+          }
+          return
+        }
+
         setSubscriptionStatus(userData.subscription_status || 'free')
         setLessonsThisMonth(userData.lessons_this_month || 0)
         setStats(prev => ({
           ...prev,
           level: userData.spanish_level || 'beginner'
         }))
+
+        // Try to load lessons from database
+        const { data: lessonsData } = await supabase
+          .from('lessons')
+          .select('*')
+          .eq('is_default', true)
+          .eq('level', userData?.spanish_level || 'beginner')
+          .order('created_at', { ascending: true })
+
+        // Use hard-coded lessons if database is empty
+        if (lessonsData && lessonsData.length > 0) {
+          setLessons(lessonsData)
+        } else {
+          const level = userData?.spanish_level || 'beginner'
+          setLessons(HARDCODED_LESSONS[level as keyof typeof HARDCODED_LESSONS] || HARDCODED_LESSONS.beginner)
+        }
+
+        // Load student's assignments
+        const { data: classStudents } = await supabase
+          .from('class_students')
+          .select('class_id')
+          .eq('student_id', user.id)
+
+        if (classStudents && classStudents.length > 0) {
+          const classIds = classStudents.map(cs => cs.class_id)
+          
+          const { data: assignmentsData } = await supabase
+            .from('assignments')
+            .select(`
+              *,
+              lessons (title),
+              assignment_submissions!inner (completed, score)
+            `)
+            .in('class_id', classIds)
+            .eq('assignment_submissions.student_id', user.id)
+            .order('due_date', { ascending: true })
+
+          setAssignments(assignmentsData || [])
+        }
+
+        // Load progress
+        const { data: progressData } = await supabase
+          .from('lesson_progress')
+          .select('*')
+          .eq('student_id', user.id)
+
+        const completed = progressData?.filter(p => p.completed).length || 0
+        const totalPoints = progressData?.reduce((sum, p) => sum + (p.score || 0), 0) || 0
+
+        setStats(prev => ({
+          ...prev,
+          lessonsCompleted: completed,
+          totalPoints
+        }))
       }
-
-      // Load available lessons based on level
-      const { data: lessonsData } = await supabase
-        .from('lessons')
-        .select('*')
-        .eq('is_default', true)
-        .eq('level', userData?.spanish_level || 'beginner')
-        .order('created_at', { ascending: true })
-        .limit(10)
-
-      setLessons(lessonsData || [])
-
-      // Load student's assignments
-      const { data: classStudents } = await supabase
-        .from('class_students')
-        .select('class_id')
-        .eq('student_id', user.id)
-
-      if (classStudents && classStudents.length > 0) {
-        const classIds = classStudents.map(cs => cs.class_id)
-        
-        const { data: assignmentsData } = await supabase
-          .from('assignments')
-          .select(`
-            *,
-            lessons (title),
-            assignment_submissions!inner (completed, score)
-          `)
-          .in('class_id', classIds)
-          .eq('assignment_submissions.student_id', user.id)
-          .order('due_date', { ascending: true })
-
-        setAssignments(assignmentsData || [])
-      }
-
-      // Load progress
-      const { data: progressData } = await supabase
-        .from('lesson_progress')
-        .select('*')
-        .eq('student_id', user.id)
-
-      const completed = progressData?.filter(p => p.completed).length || 0
-      const totalPoints = progressData?.reduce((sum, p) => sum + (p.score || 0), 0) || 0
-
-      setStats(prev => ({
-        ...prev,
-        lessonsCompleted: completed,
-        totalPoints
-      }))
 
     } catch (error) {
       console.error('Error loading user data:', error)
@@ -110,7 +165,7 @@ export default function DashboardPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    router.push('/')
   }
 
   const canTakeLesson = () => {
@@ -132,16 +187,22 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+      <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
+            <Link href="/dashboard" className="flex items-center gap-2">
               <span className="text-3xl">🦜</span>
               <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 LearnSmart
               </span>
-            </div>
+            </Link>
             <div className="flex items-center gap-4">
+              <Link href="/dashboard" className="text-gray-700 hover:text-purple-600 font-medium">
+                Dashboard
+              </Link>
+              <Link href="/dashboard/lessons" className="text-gray-700 hover:text-purple-600 font-medium">
+                Lessons
+              </Link>
               {subscriptionStatus === 'free' && (
                 <Link 
                   href="/payment"
@@ -150,15 +211,17 @@ export default function DashboardPage() {
                   ⭐ Upgrade
                 </Link>
               )}
-              <span className="text-sm text-gray-700 font-medium">
-                {user?.user_metadata?.name || user?.email}
-              </span>
-              <button
-                onClick={handleSignOut}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-purple-700 hover:to-pink-700"
-              >
-                Sign Out
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-gray-700 font-medium">
+                  {user?.user_metadata?.name || user?.email}
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-purple-700 hover:to-pink-700"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -187,6 +250,15 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Join Class Section */}
+          <div className="bg-white rounded-3xl p-8 shadow-xl">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Join a Class</h2>
+              <p className="text-gray-600">Enter a class code to join your teacher's class</p>
+            </div>
+            <JoinClassForm onJoined={loadUserData} />
+          </div>
+
           {/* Paywall Warning */}
           {!canTakeLesson() && (
             <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl p-6 text-white shadow-lg">
@@ -200,16 +272,7 @@ export default function DashboardPage() {
               </Link>
             </div>
           )}
-        {/* Join Class Section */}
-            <div className="bg-white rounded-3xl p-8 shadow-xl">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                <h2 className="text-2xl font-bold text-gray-800">Join a Class</h2>
-                <p className="text-gray-600">Enter a class code to join your teacher's class</p>
-                </div>
-            </div>
-            <JoinClassForm onJoined={loadUserData} />
-            </div>
+
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-purple-100 hover:shadow-xl transition-shadow">
@@ -283,7 +346,7 @@ export default function DashboardPage() {
 
           {/* Available Lessons */}
           <div className="bg-white rounded-3xl p-8 shadow-xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Available Lessons</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Available Lessons ({stats.level})</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {lessons.map((lesson) => (
                 <div
@@ -328,6 +391,7 @@ export default function DashboardPage() {
     </div>
   )
 }
+
 function JoinClassForm({ onJoined }: { onJoined: () => void }) {
   const [classCode, setClassCode] = useState('')
   const [loading, setLoading] = useState(false)

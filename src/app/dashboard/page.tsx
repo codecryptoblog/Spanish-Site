@@ -76,12 +76,21 @@ export default function DashboardPage() {
 
       setUser(user)
 
-      // Load user data
-      const { data: userData } = await supabase
+      // Load user data with error handling
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', user.id)
         .single()
+
+      if (userError) {
+        console.error('User data error:', userError)
+        // Use default values if user data fails to load
+        setStats(prev => ({ ...prev, level: 'beginner' }))
+        setLessons(HARDCODED_LESSONS.beginner)
+        setLoading(false)
+        return
+      }
 
       if (userData) {
         // Check if user is teacher/admin - redirect them
@@ -96,68 +105,79 @@ export default function DashboardPage() {
 
         setSubscriptionStatus(userData.subscription_status || 'free')
         setLessonsThisMonth(userData.lessons_this_month || 0)
+        const userLevel = userData.spanish_level || 'beginner'
         setStats(prev => ({
           ...prev,
-          level: userData.spanish_level || 'beginner'
+          level: userLevel
         }))
 
         // Try to load lessons from database
-        const { data: lessonsData } = await supabase
+        const { data: lessonsData, error: lessonsError } = await supabase
           .from('lessons')
           .select('*')
           .eq('is_default', true)
-          .eq('level', userData?.spanish_level || 'beginner')
+          .eq('level', userLevel)
           .order('created_at', { ascending: true })
 
-        // Use hard-coded lessons if database is empty
-        if (lessonsData && lessonsData.length > 0) {
-          setLessons(lessonsData)
+        // Always use hard-coded lessons as fallback
+        if (lessonsError || !lessonsData || lessonsData.length === 0) {
+          console.log('Using hardcoded lessons')
+          setLessons(HARDCODED_LESSONS[userLevel as keyof typeof HARDCODED_LESSONS] || HARDCODED_LESSONS.beginner)
         } else {
-          const level = userData?.spanish_level || 'beginner'
-          setLessons(HARDCODED_LESSONS[level as keyof typeof HARDCODED_LESSONS] || HARDCODED_LESSONS.beginner)
+          setLessons(lessonsData)
         }
 
-        // Load student's assignments
-        const { data: classStudents } = await supabase
-          .from('class_students')
-          .select('class_id')
-          .eq('student_id', user.id)
+        // Load assignments (with error handling)
+        try {
+          const { data: classStudents } = await supabase
+            .from('class_students')
+            .select('class_id')
+            .eq('student_id', user.id)
 
-        if (classStudents && classStudents.length > 0) {
-          const classIds = classStudents.map(cs => cs.class_id)
-          
-          const { data: assignmentsData } = await supabase
-            .from('assignments')
-            .select(`
-              *,
-              lessons (title),
-              assignment_submissions!inner (completed, score)
-            `)
-            .in('class_id', classIds)
-            .eq('assignment_submissions.student_id', user.id)
-            .order('due_date', { ascending: true })
+          if (classStudents && classStudents.length > 0) {
+            const classIds = classStudents.map(cs => cs.class_id)
+            
+            const { data: assignmentsData } = await supabase
+              .from('assignments')
+              .select(`
+                *,
+                lessons (title),
+                assignment_submissions!inner (completed, score)
+              `)
+              .in('class_id', classIds)
+              .eq('assignment_submissions.student_id', user.id)
+              .order('due_date', { ascending: true })
 
-          setAssignments(assignmentsData || [])
+            setAssignments(assignmentsData || [])
+          }
+        } catch (error) {
+          console.error('Error loading assignments:', error)
         }
 
-        // Load progress
-        const { data: progressData } = await supabase
-          .from('lesson_progress')
-          .select('*')
-          .eq('student_id', user.id)
+        // Load progress (with error handling)
+        try {
+          const { data: progressData } = await supabase
+            .from('lesson_progress')
+            .select('*')
+            .eq('student_id', user.id)
 
-        const completed = progressData?.filter(p => p.completed).length || 0
-        const totalPoints = progressData?.reduce((sum, p) => sum + (p.score || 0), 0) || 0
+          const completed = progressData?.filter(p => p.completed).length || 0
+          const totalPoints = progressData?.reduce((sum, p) => sum + (p.score || 0), 0) || 0
 
-        setStats(prev => ({
-          ...prev,
-          lessonsCompleted: completed,
-          totalPoints
-        }))
+          setStats(prev => ({
+            ...prev,
+            lessonsCompleted: completed,
+            totalPoints
+          }))
+        } catch (error) {
+          console.error('Error loading progress:', error)
+        }
       }
 
     } catch (error) {
       console.error('Error loading user data:', error)
+      // Fallback to hardcoded lessons
+      setLessons(HARDCODED_LESSONS.beginner)
     } finally {
       setLoading(false)
     }
@@ -199,9 +219,6 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4">
               <Link href="/dashboard" className="text-gray-700 hover:text-purple-600 font-medium">
                 Dashboard
-              </Link>
-              <Link href="/dashboard/lessons" className="text-gray-700 hover:text-purple-600 font-medium">
-                Lessons
               </Link>
               {subscriptionStatus === 'free' && (
                 <Link 

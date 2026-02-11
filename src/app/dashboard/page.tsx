@@ -200,7 +200,16 @@ export default function DashboardPage() {
               </Link>
             </div>
           )}
-
+        {/* Join Class Section */}
+            <div className="bg-white rounded-3xl p-8 shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                <h2 className="text-2xl font-bold text-gray-800">Join a Class</h2>
+                <p className="text-gray-600">Enter a class code to join your teacher's class</p>
+                </div>
+            </div>
+            <JoinClassForm onJoined={loadUserData} />
+            </div>
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-purple-100 hover:shadow-xl transition-shadow">
@@ -317,5 +326,106 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+  )
+}
+function JoinClassForm({ onJoined }: { onJoined: () => void }) {
+  const [classCode, setClassCode] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const supabase = createClient()
+
+  const handleJoinClass = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    setSuccess(false)
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Find class by code
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('code', classCode.toUpperCase())
+        .single()
+
+      if (classError || !classData) {
+        throw new Error('Invalid class code')
+      }
+
+      // Check if already joined
+      const { data: existing } = await supabase
+        .from('class_students')
+        .select('id')
+        .eq('class_id', classData.id)
+        .eq('student_id', user.id)
+        .single()
+
+      if (existing) {
+        throw new Error('You are already in this class')
+      }
+
+      // Get user name
+      const { data: userData } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', user.id)
+        .single()
+
+      // Join class
+      await supabase
+        .from('class_students')
+        .insert({
+          class_id: classData.id,
+          student_id: user.id,
+          student_name: userData?.name || 'Student'
+        })
+
+      setSuccess(true)
+      setClassCode('')
+      setTimeout(() => {
+        onJoined()
+      }, 1500)
+    } catch (error: any) {
+      setError(error.message || 'Failed to join class')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleJoinClass} className="space-y-4">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-xl text-sm">
+          ✓ Successfully joined class!
+        </div>
+      )}
+      <div className="flex gap-3">
+        <input
+          type="text"
+          value={classCode}
+          onChange={(e) => setClassCode(e.target.value.toUpperCase())}
+          className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 text-gray-800 font-mono text-center text-lg"
+          placeholder="Enter Class Code (e.g., ABC123)"
+          maxLength={6}
+          required
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50"
+        >
+          {loading ? 'Joining...' : 'Join Class'}
+        </button>
+      </div>
+    </form>
   )
 }

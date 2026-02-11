@@ -31,16 +31,17 @@ export default function TeacherDashboard() {
       }
 
       // Check if user is teacher
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+      // At the top of loadTeacherData function, change the role check:
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single()
 
-      if (userData?.role !== 'teacher' && userData?.role !== 'school_admin') {
-        router.push('/dashboard')
+        if (userData?.role !== 'teacher' && userData?.role !== 'school_admin' && userData?.role !== 'admin') {
+            router.push('/dashboard')
         return
-      }
+        }
 
       setUser(user)
 

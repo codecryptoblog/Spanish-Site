@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 
-export default function SignUp() {
+function SignUpForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -26,7 +26,7 @@ export default function SignUp() {
     if (data) {
       setOnboardingData(JSON.parse(data))
     }
-  }, [])
+  }, [searchParams])
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -215,5 +215,20 @@ export default function SignUp() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignUp() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignUpForm />
+    </Suspense>
   )
 }
